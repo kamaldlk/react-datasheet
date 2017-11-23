@@ -1,46 +1,74 @@
-/**
- * Stateless component which render a header cell for the Datasheet
- * header rows.
- *
- * @param {object} props Component props
- * @param {int | float | bool | string} props.value Header cell value (label)
- * @param {ReactElement} Cell component to render instead of the value.
- * @param {int} props.row Row of the header.
- * @param {int} props.col Col of the row.
- * @param {int} props.rowSpan Table cell row span.
- * @param {int} props.colSpan Table cell row span.
- * @param {string} props.overflow Cell overflow className. One of - wrap,
- *                                nowrap or clip
- * @param {string} props.className Cell custom className.
- * @return {ReactElement} The header table cell  with the
- *                        user custom component inside
- */
-export default HeaderCell = props => {
-  const {
-    row, col, rowSpan, colSpan, width,
-    overflow, className, selected
-  } = props;
-  const style = { width };
+import React, { PureComponent } from 'react'
+import PropTypes from 'prop-types';
 
-  return (
-    <th
-      className={[
-        className, 'header-cell', 'cell',
-        'read-only', overflow
-      ].filter(a => a).join(' ')}
-      colSpan={ colSpan || 1 }
-      rowSpan={ rowSpan || 1 }
-      style={ style }
-    >
-      {
-        props.component ?
-          props.component :
-          (
-            <span style={{display: 'block'}}>
-              { value }
-            </span>
-          )
+class HeaderCell extends PureComponent {
+  constructor(props) {
+    super(props);
+  }
+
+  componentDidMount() {
+    this.checkWidth();
+  }
+
+  componentDidUpdate() {
+    this.checkWidth();
+  }
+
+  checkWidth() {
+    const { onWidthChange, width, row, col } = this.props;
+
+    if (onWidthChange) {
+      const bcr = this.cellDomNode.getBoundingClientRect();
+
+      if (width != bcr.width) {
+        onWidthChange(row, col, bcr.width);
       }
-    </th>
-  );
+    }
+  }
+
+  render() {
+    const {
+      row, col, rowSpan, colSpan, width,
+      overflow, className, value, component
+    } = this.props;
+    const style = { width };
+    const fullCN = [
+      className, 'header-cell', 'cell',
+      'read-only', overflow
+    ].filter(a => a).join(' ');
+
+    return (
+      <th
+        ref={ ref => this.cellDomNode = ref }
+        className={ fullCN }
+        colSpan={ colSpan || 1 }
+        rowSpan={ rowSpan || 1 }
+        style={ style }
+      >
+        {
+          component ?
+            component :
+            (
+              <span style={{display: 'block'}}>
+                { value }
+              </span>
+            )
+        }
+      </th>
+    );
+  }
 }
+
+HeaderCell.propTypes = {
+  row: PropTypes.number.isRequired,
+  col: PropTypes.number.isRequired,
+  colSpan: PropTypes.number,
+  rowSpan: PropTypes.number,
+  width: PropTypes.string,
+  overflow: PropTypes.oneOf(['wrap', 'nowrap', 'clip']),
+  className: PropTypes.string,
+  component: PropTypes.element,
+  onWidthChange: PropTypes.func
+};
+
+export default HeaderCell;

@@ -38,8 +38,13 @@ export default class DataCell extends PureComponent {
   }
 
   render() {
-    const {row, col, rowSpan, readOnly, colSpan, width, overflow, value, className, editing, selected, onMouseDown, onMouseOver, onDoubleClick, onContextMenu} = this.props;
+    const {
+      row, col, rowSpan, readOnly, colSpan, width, overflow,
+      value, className, editing, selected, onMouseDown, onMouseOver,
+      onDoubleClick, onContextMenu
+    } = this.props;
     const style = { width };
+
     return (
       <td
         className={[

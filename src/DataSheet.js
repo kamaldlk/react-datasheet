@@ -2,6 +2,7 @@ import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import DataCell from './DataCell';
 import ComponentCell from './ComponentCell';
+import HeaderCell from './HeaderCell';
 
 const TAB_KEY           =  9;
 const ENTER_KEY         = 13;
@@ -80,7 +81,7 @@ export default class DataSheet extends PureComponent {
   }
 
   handleCopy(e) {
-    if(isEmpty(this.state.editing)) {
+    if (isEmpty(this.state.editing)) {
       e.preventDefault();
       const {dataRenderer, valueRenderer, data} = this.props;
       const {start, end} = this.state;
@@ -101,7 +102,7 @@ export default class DataSheet extends PureComponent {
   }
 
   handlePaste(e) {
-    if(isEmpty(this.state.editing)) {
+    if (isEmpty(this.state.editing)) {
       const start = this.state.start;
 
       const parse = this.props.parsePaste || defaultParsePaste;
@@ -280,31 +281,53 @@ export default class DataSheet extends PureComponent {
     }
   }
 
-  render() {
-    const {dataRenderer, valueRenderer, className, overflow} = this.props;
+  shouldClear(i, j) {
+    return this.state.clear.i === i && this.state.clear.j === j;
+  }
 
-    const isSelected = (i, j) => {
-      const start = this.state.start;
-      const end = this.state.end;
-      const posX = (j >= start.j && j <= end.j);
-      const negX = (j <= start.j && j >= end.j);
-      const posY = (i >= start.i && i <= end.i);
-      const negY = (i <= start.i && i >= end.i);
+  isEditing(i, j) {
+    return this.state.editing.i === i && this.state.editing.j === j;
+  }
 
-      return (posX && posY) ||
-        (negX && posY) ||
-        (negX && negY) ||
-        (posX && negY);
-    };
+  isReverting(i, j) {
+    return this.state.reverting.i === i && this.state.reverting.j === j;
+  }
 
-    const isEditing = (i, j) => this.state.editing.i === i && this.state.editing.j === j;
-    const isReverting = (i, j) => this.state.reverting.i === i && this.state.reverting.j === j;
-    const shouldClear = (i, j) =>  this.state.clear.i === i && this.state.clear.j === j;
+  isSelected(i, j) {
+    const start = this.state.start;
+    const end = this.state.end;
+    const posX = (j >= start.j && j <= end.j);
+    const negX = (j <= start.j && j >= end.j);
+    const posY = (i >= start.i && i <= end.i);
+    const negY = (i <= start.i && i >= end.i);
 
-    return <table ref={(r) => this.dgDom = r} className={['data-grid', className, overflow].filter(a => a).join(' ')}>
+    return (posX && posY) ||
+      (negX && posY) ||
+      (negX && negY) ||
+      (posX && negY);
+  }
+
+  buildTableHeader(data) {
+    return data && data.length ? (
+      <thead>
+        { data.map((row, i) => this.buildTableHeaderRow(row, i)) }
+      </thead>
+    ) : null;
+  }
+
+  buildTableBody(data) {
+    return (
       <tbody>
-      {this.props.data.map((row, i) =>
-        <tr key={this.props.keyFn ? this.props.keyFn(i) : i}>
+        { data.map((row, i) => this.buildTableRow(row, i)) }
+      </tbody>
+    );
+  }
+
+  buildTableHeaderRow(row, i) {
+    const { valueRenderer } = this.props;
+
+    return (
+      <tr key={ 'header-row-' + i }>
         {
           row.map((cell, j) => {
             const props = {
@@ -312,39 +335,92 @@ export default class DataSheet extends PureComponent {
               className: cell.className ? cell.className : '',
               row: i,
               col: j,
-              selected: isSelected(i, j),
-              onMouseDown:   cell.disableEvents ? nullFtn : this.onMouseDown,
-              onDoubleClick: cell.disableEvents ? nullFtn : this.onDoubleClick,
-              onMouseOver:   cell.disableEvents ? nullFtn : this.onMouseOver,
-              onContextMenu: cell.disableEvents ? nullFtn : this.onContextMenu,
-              editing: isEditing(i, j),
-              reverting: isReverting(i, j),
+              colSpan: cell.colSpan,
+              rowSpan: cell.rowSpan,
+              readOnly: true,
+              width: typeof cell.width === 'number' ? cell.width + 'px' : cell.width,
+              overflow: cell.overflow,
+              value: valueRenderer(cell, i, j, true),
+              component: cell.component
+            };
+
+            return <HeaderCell {...props} />;
+          })
+        }
+      </tr>
+    );
+  }
+
+  buildTableRow(row, i) {
+    const { dataRenderer, valueRenderer } = this.props;
+
+    return (
+      <tr key={this.props.keyFn ? this.props.keyFn(i) : i}>
+        {
+          row.map((cell, j) => {
+            const props = {
+              key: cell.key ? cell.key : j,
+              className: cell.className ? cell.className : '',
+              row: i,
+              col: j,
+              selected: this.isSelected(i, j),
+              onMouseDown:   this.onMouseDown,
+              onDoubleClick: this.onDoubleClick,
+              onMouseOver:   this.onMouseOver,
+              onContextMenu: this.onContextMenu,
+              editing: this.isEditing(i, j),
+              reverting: this.isReverting(i, j),
               colSpan: cell.colSpan,
               width: typeof cell.width === 'number' ? cell.width + 'px' : cell.width,
               overflow: cell.overflow,
-              value: valueRenderer(cell, i, j),
+              value: valueRenderer(cell, i, j, false)
             };
-            if (cell.component) {
-              return <ComponentCell
-                {...props}
-                forceComponent={cell.forceComponent || false}
-                component={cell.component}
-              />
+
+            if (cell.disableEvents) {
+              props.onMouseDown = nullFtn;
+              props.onDoubleClick = nullFtn;
+              props.onMouseOver = nullFtn;
+              props.onContextMenu = nullFtn;
             }
-            return <DataCell
-              {...props}
-              data     = {dataRenderer ? dataRenderer(cell, i, j) : null}
-              clear    = {shouldClear(i, j)}
-              rowSpan  = {cell.rowSpan}
-              onChange = {this.onChange}
-              readOnly = {cell.readOnly}
-             />
-          }
-        )
-      }
-      </tr>)}
-      </tbody>
-    </table>;
+
+            if (cell.component) {
+              return (
+                <ComponentCell
+                  {...props}
+                  forceComponent={ cell.forceComponent || false }
+                  component={ cell.component }
+                />
+              );
+            }
+
+            return (
+              <DataCell
+                {...props}
+                data     = { dataRenderer ? dataRenderer(cell, i, j) : null }
+                clear    = { this.shouldClear(i, j) }
+                rowSpan  = { cell.rowSpan }
+                onChange = { this.onChange }
+                readOnly = { cell.readOnly }
+              />
+            );
+          })
+        }
+      </tr>
+    );
+  }
+
+  render() {
+    const { className, overflow, data, headerData } = this.props;
+
+    return (
+      <table
+        ref={(r) => this.dgDom = r}
+        className={['data-grid', className, overflow].filter(a => a).join(' ')}
+      >
+        { this.buildTableHeader(headerData) }
+        { this.buildTableBody(data) }
+      </table>
+    );
   }
 }
 
@@ -357,4 +433,5 @@ DataSheet.propTypes = {
   valueRenderer: PropTypes.func.isRequired,
   dataRenderer: PropTypes.func,
   parsePaste: PropTypes.func,
+  headerData: PropTypes.array
 };

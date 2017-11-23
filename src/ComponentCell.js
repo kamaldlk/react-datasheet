@@ -21,12 +21,12 @@ export default class ComponentCell extends PureComponent {
   }
 
   render() {
-    let {
-      row, col, readOnly, forceComponent, rowSpan, colSpan, width, overflow, value, className, editing, selected,
-      onMouseDown, onMouseOver, onDoubleClick, onContextMenu
+    const {
+      row, col, readOnly, forceComponent, rowSpan, colSpan, width,
+      overflow, value, className, editing, selected, onMouseDown,
+      onMouseOver, onDoubleClick, onContextMenu
     } = this.props;
     const style = { width };
-
     return (
       <td
         className={[

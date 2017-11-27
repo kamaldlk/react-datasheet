@@ -57,10 +57,7 @@ export default class DataSheet extends PureComponent {
       reverting: {},
       clear: {},
       headScrollLeft: 0, // Scrolling when having header
-      widths: { // Widths repository when having header (to keep the width of the cells the same in head and body)
-        head: [],
-        body: []
-      }
+      gridWidths: this.defaultGridWidths(props.headerData, props.data)
     };
     this.state = this.defaultState;
 
@@ -86,6 +83,33 @@ export default class DataSheet extends PureComponent {
     if (headerData && headerData.length) {
       this.tbodyDom.addEventListener('scroll', this.handleTableScroll);
     }
+  }
+
+  /**
+   * Build gridWidths default state. It create a matrix (one for the header and another one
+   * for the body) with the  same structure of the data grid sheet, where the content of each
+   * `cell` will be its current width.
+   *
+   * It's only necesary when having header because it'll be fixed on scrolling then we've to
+   * separate the header of the table from the body with CSS so 0the table will render the
+   * cells with diferent widths. Even when the user sets the cell with in the data arrays
+   * there is the posibility of diferent width because of css styles, more content than
+   * expected, etc, causing it to create a datasheet that makes no sense then with this
+   * matrix where there is the updated with of each cell then we can make sure all columns
+   * have the same width. Note: The only important row of the header it's the last one, the
+   * other (if there is more than one)
+   *
+   * @param {array} headerData Data of the header.
+   * @param {array} bodyData Data of the body.
+   * @return {object} gridWidths default state.
+   */
+  defaultGridWidths(headerData, bodyData) {
+    const buildGrid = data => data.map(row => row.map(cell => cell.width || null));
+
+    return {
+      header: headerData ? buildGrid(headerData) : [],
+      body: buildGrid(bodyData)
+    };
   }
 
   pageClick(e) {
@@ -249,11 +273,12 @@ export default class DataSheet extends PureComponent {
   handleTableScroll(e) {
     // Setting the thead left to the inverse of tbody.scrollLeft will make it track the movement
     // of the tbody element.
-    this.setState({ headScrollLeft: -this.tbodyDom.scrollLeft });
+    const headScrollLeft = -this.tbodyDom.scrollLeft;
 
     // Setting the cells left value to the same as the tbody.scrollLeft makes it maintain
     // it's relative position at the left of the table.
     // console.log(e, this.tbodyDom.scrollLeft, this.tbodyDom.offsetWidth, this.tbodyDom);
+    this.setState({ headScrollLeft });
   }
 
   onContextMenu(evt, i, j) {

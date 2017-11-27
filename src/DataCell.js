@@ -7,6 +7,10 @@ export default class DataCell extends PureComponent {
     this.state = {updated: false}
   }
 
+  componentDidMount() {
+    this.checkWidth();
+  }
+
   componentWillUpdate(nextProps) {
     if (nextProps.value !== this.props.value) {
       this.setState({updated: true});
@@ -15,9 +19,12 @@ export default class DataCell extends PureComponent {
   }
 
   componentDidUpdate(prevProps) {
+    this.checkWidth();
+
     if (prevProps.editing === true && this.props.editing === false && this.props.reverting === false) {
       this.onChange(this._input.value);
     }
+
     if (prevProps.editing === false && this.props.editing === true) {
       if (this.props.clear) {
         this._input.value = '';
@@ -30,6 +37,18 @@ export default class DataCell extends PureComponent {
 
   componentWillUnmount() {
     clearTimeout(this.timeout);
+  }
+
+  checkWidth() {
+    const { onWidthChange, width, row, col } = this.props;
+
+    if (onWidthChange) {
+      const bcr = this.cellDomNode.getBoundingClientRect();
+
+      if (width != bcr.width) {
+        onWidthChange(row, col, bcr.width);
+      }
+    }
   }
 
   onChange(value) {
@@ -47,6 +66,7 @@ export default class DataCell extends PureComponent {
 
     return (
       <td
+        ref={ ref => this.cellDomNode = ref }
         className={[
           className,
           'cell', overflow,
@@ -85,5 +105,6 @@ DataCell.propTypes = {
   onDoubleClick: PropTypes.func.isRequired,
   onMouseOver: PropTypes.func.isRequired,
   onContextMenu: PropTypes.func.isRequired,
-  updated: PropTypes.bool
+  updated: PropTypes.bool,
+  onWidthChange: PropTypes.func
 };

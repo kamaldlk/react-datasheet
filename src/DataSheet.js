@@ -15,7 +15,6 @@ const DELETE_KEY        = 46;
 const BACKSPACE_KEY     =  8;
 
 const isEmpty = (obj) => Object.keys(obj).length === 0;
-
 const range = (start, end) => {
   const array = [];
   const inc = (end - start > 0);
@@ -24,9 +23,7 @@ const range = (start, end) => {
   }
   return array;
 };
-
 const nullFtn = (obj) => {};
-
 const defaultParsePaste = (str) => {
   return str.split(/\r\n|\n|\r/)
     .map((row) => row.split('\t'));
@@ -48,6 +45,18 @@ export default class DataSheet extends PureComponent {
     this.pageClick          = this.pageClick.bind(this);
     this.onChange           = this.onChange.bind(this);
 
+    // Grid sizes repository
+    // The bloked prop will be true only when the sizes has been
+    // changed from outside (componentWillReceiveProps) to block
+    // changes perform by the onCellWidthChange. In that case those
+    // changes will be ignored because the component will be
+    // re-rendered again.
+    this.clearTimeoutIdForSizesUpdater = null;
+    this.sizes = {
+      cellWidths: this.defaultCellWidths(props.headerData, props.data),
+      bloqued: false
+    };
+
     this.defaultState = {
       start: {},
       end: {},
@@ -57,7 +66,7 @@ export default class DataSheet extends PureComponent {
       reverting: {},
       clear: {},
       headScrollLeft: 0, // Scrolling when having header
-      gridWidths: this.defaultGridWidths(props.headerData, props.data)
+      cellWidths: this.sizes.cellWidths
     };
     this.state = this.defaultState;
 
@@ -74,7 +83,10 @@ export default class DataSheet extends PureComponent {
 
   componentWillUnmount() {
     this.removeAllListeners();
-    this.tbodyDom.removeEventListener('scroll', this.handleTableScroll);
+
+    if (this.tbodyDom) {
+      this.tbodyDom.removeEventListener('scroll', this.handleTableScroll);
+    }
   }
 
   componentDidMount() {
@@ -85,8 +97,18 @@ export default class DataSheet extends PureComponent {
     }
   }
 
+  componentWillReceiveProps(nextProps) {
+    const widths = this.updateCellWidths(nextProps.headerData, nextProps.data);
+
+    if (widths.hasChanged) {
+      this.sizes.cellWidths = widths.cellWidths;
+      this.sizes.bloqued = true;
+      this.setState({ cellWidths: widths.cellWidths });
+    }
+  }
+
   /**
-   * Build gridWidths default state. It create a matrix (one for the header and another one
+   * Build cellWidths default state. It create a matrix (one for the header and another one
    * for the body) with the  same structure of the data grid sheet, where the content of each
    * `cell` will be its current width.
    *
@@ -101,15 +123,110 @@ export default class DataSheet extends PureComponent {
    *
    * @param {array} headerData Data of the header.
    * @param {array} bodyData Data of the body.
-   * @return {object} gridWidths default state.
+   * @return {object} cellWidths default state.
    */
-  defaultGridWidths(headerData, bodyData) {
+  defaultCellWidths(headerData, bodyData) {
     const buildGrid = data => data.map(row => row.map(cell => cell.width || null));
 
     return {
       header: headerData ? buildGrid(headerData) : [],
       body: buildGrid(bodyData)
     };
+  }
+
+  /**
+   * Updates cell widths state when the component recive props.
+   *
+   * @param {array} headerData Data of the header.
+   * @param {array} bodyData Data of the body.
+   * @return {object} cellWidths updated state and if those has changed.
+   */
+  updateCellWidths(headerData, bodyData) {
+    const cellWidths = Object.assign({}, this.state.cellWidths);
+
+    const updateWidths = (widths, newData) => {
+      let hasChanged = widths.length != newData.length;
+
+      newData.forEach((row, i) => {
+        if (widths[i] === undefined) {
+          hasChanged = true;
+          widths[i] = [];
+        } else if (widths[i].length !== row.length) {
+          hasChanged = true;
+        }
+
+        row.forEach((cell, j) => {
+          if (widths[i][j] === undefined) {
+            widths[i][j] = null;
+          }
+
+          if (widths[i][j] != cell.width) {
+            hasChanged = true;
+            widths[i][j] = cell.width;
+          }
+        });
+      });
+
+      return { widths, hasChanged };
+    };
+
+    const update = (has, had, widths, data) => {
+      if (has) {
+        return updateWidths(widths, data);
+      } else if (had) {
+        return {
+          widths: [],
+          hasChanged: true
+        };
+      }
+
+      return {
+        widths: widths,
+        hasChanged: false
+      };
+    }
+
+    const hasHeader = headerData && headerData.length > 0;
+    const hadHeader = cellWidths.header.length > 0;
+    const hasBody = bodyData.length > 0;
+    const hadBody = cellWidths.body.length > 0;
+    const upHeaderResult = update(hasHeader, hadHeader, cellWidths.header, headerData);
+    const upBodyResult = update(hasBody, hadBody, cellWidths.body, bodyData);
+
+    if (upHeaderResult.hasChanged || upBodyResult.hasChanged) {
+      return {
+        cellWidths: {
+          header: upHeaderResult.widths,
+          body: upBodyResult.widths
+        },
+        hasChanged: true
+      };
+    }
+
+    return {
+      cellWidths,
+      hasChanged: false
+    }
+  }
+
+  /**
+   * Throttle function to update the cell widths state. This method will
+   * be called by the onCellWidthChange several times on rendering so to
+   * avoid useless state changes we have this function that only updates
+   * the state after all the update width calls.
+   *
+   * @return {void}
+   */
+  updateCellWidthsState() {
+    if (this.clearTimeoutIdForSizesUpdater === null) {
+      this.clearTimeoutIdForSizesUpdater = setTimeout(() => {
+        this.clearTimeoutIdForSizesUpdater = null;
+
+        if (!this.sizes.bloqued) {
+          this.setState({ cellWidths: this.sizes.cellWidths });
+        }
+      }, 50);
+    }
   }
 
   pageClick(e) {
@@ -362,13 +479,21 @@ export default class DataSheet extends PureComponent {
   }
 
   onCellWidthChange(row, col, width, isHeader) {
-
+    // When the sizes change from a props change then the function
+    // called to update the cellWidths state should not update it,
+    // it's because this cell width change may come from the previous
+    // render call. Then we wait until the component render with the
+    // new sizes and we can continue updating the sizes repository.
+    if (!this.sizes.bloqued) {
+      this.sizes.cellWidths[isHeader ? 'header' : 'body'][row][col] = width;
+      this.updateCellWidthsState(); // Throttle function, 50 ms
+    }
   }
 
   buildTableHeader(data) {
     return data && data.length ? (
       <thead style={{ left: this.state.headScrollLeft }}>
-        { data.map((row, i) => this.buildTableHeaderRow(row, i)) }
+        { data.map((row, i) => this.buildHeaderRow(row, i)) }
       </thead>
     ) : null;
   }
@@ -376,12 +501,12 @@ export default class DataSheet extends PureComponent {
   buildTableBody(data) {
     return (
       <tbody ref={ ref => this.tbodyDom = ref }>
-        { data.map((row, i) => this.buildTableRow(row, i)) }
+        { data.map((row, i) => this.buildBodyRow(row, i)) }
       </tbody>
     );
   }
 
-  buildTableHeaderRow(row, i) {
+  buildHeaderRow(row, i) {
     const { valueRenderer } = this.props;
 
     return (
@@ -410,7 +535,7 @@ export default class DataSheet extends PureComponent {
     );
   }
 
-  buildTableRow(row, i) {
+  buildBodyRow(row, i) {
     const { dataRenderer, valueRenderer } = this.props;
 
     return (
@@ -432,7 +557,8 @@ export default class DataSheet extends PureComponent {
               colSpan: cell.colSpan,
               width: this.parseStyleSize(cell.width),
               overflow: cell.overflow,
-              value: valueRenderer(cell, i, j, false)
+              value: valueRenderer(cell, i, j, false),
+              onWidthChange: (row, col, newWidth) => this.onCellWidthChange(row, col, newWidth, false)
             };
 
             if (cell.disableEvents) {
@@ -474,7 +600,8 @@ export default class DataSheet extends PureComponent {
       'data-grid', className, overflow,
       headerData && headerData.length && 'has-header'
     ].filter(c => c).join(' ');
-
+    this.sizes.bloqued = false; // Allow sizes change
+    console.log('render');
     return (
       <table ref={ (r) => this.dgDom = r } className={ fullCN }>
         { this.buildTableHeader(headerData) }

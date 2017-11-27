@@ -7,6 +7,10 @@ export default class ComponentCell extends PureComponent {
     this.state = { updated: false };
   }
 
+  componentDidMount() {
+    this.checkWidth();
+  }
+
   componentWillUpdate(nextProps) {
     if (nextProps.value !== this.props.value) {
       this.setState({ updated: true });
@@ -16,8 +20,24 @@ export default class ComponentCell extends PureComponent {
     }
   }
 
+  componentDidUpdate() {
+    this.checkWidth();
+  }
+
   componentWillUnmount() {
     clearTimeout(this.timeout);
+  }
+
+  checkWidth() {
+    const { onWidthChange, width, row, col } = this.props;
+
+    if (onWidthChange) {
+      const bcr = this.cellDomNode.getBoundingClientRect();
+
+      if (width != bcr.width) {
+        onWidthChange(row, col, bcr.width);
+      }
+    }
   }
 
   render() {
@@ -29,6 +49,7 @@ export default class ComponentCell extends PureComponent {
     const style = { width };
     return (
       <td
+        ref={ ref => this.cellDomNode = ref }
         className={[
           className, 'cell', overflow,
           editing && 'editing', selected && 'selected',
@@ -62,5 +83,6 @@ ComponentCell.propTypes = {
   onMouseOver: PropTypes.func.isRequired,
   onContextMenu: PropTypes.func.isRequired,
   updated: PropTypes.bool,
-  forceComponent: PropTypes.bool
+  forceComponent: PropTypes.bool,
+  onWidthChange: PropTypes.func
 };

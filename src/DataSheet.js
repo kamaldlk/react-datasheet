@@ -45,18 +45,6 @@ export default class DataSheet extends PureComponent {
     this.pageClick          = this.pageClick.bind(this);
     this.onChange           = this.onChange.bind(this);
 
-    // Grid sizes repository
-    // The bloked prop will be true only when the sizes has been
-    // changed from outside (componentWillReceiveProps) to block
-    // changes perform by the onCellWidthChange. In that case those
-    // changes will be ignored because the component will be
-    // re-rendered again.
-    this.clearTimeoutIdForSizesUpdater = null;
-    this.sizes = {
-      cellWidths: this.defaultCellWidths(props.headerData, props.data),
-      bloqued: false
-    };
-
     this.defaultState = {
       start: {},
       end: {},
@@ -64,12 +52,29 @@ export default class DataSheet extends PureComponent {
       forceEdit: false,
       editing: {},
       reverting: {},
-      clear: {},
-      headScrollLeft: 0, // Scrolling when having header
-      cellWidths: this.sizes.cellWidths
+      clear: {}
     };
-    this.state = this.defaultState;
 
+    // Grid sizes repository. Only in use when having header.
+    // The bloked prop will be true only when the sizes has been
+    // changed from outside (componentWillReceiveProps) to block
+    // changes perform by the onCellWidthChange. In that case those
+    // changes will be ignored because the component will be
+    // re-rendered again.
+    this.hasHeader = props.headerData && props.headerData.length > 0;
+    if (this.hasHeader) {
+      this.clearTimeoutIdForSizesUpdater = null;
+      this.sizes = {
+        cellWidths: this.defaultCellWidths(props.headerData, props.data),
+        bloqued: false
+      };
+
+      this.defaultState.headScrollLeft = 0; // Scrolling when having header
+      this.defaultState.cellWidths = this.sizes.cellWidths;
+      this.defaultState.isScrolling = false;
+    }
+
+    this.state = this.defaultState;
     this.removeAllListeners = this.removeAllListeners.bind(this);
   }
 
@@ -90,20 +95,20 @@ export default class DataSheet extends PureComponent {
   }
 
   componentDidMount() {
-    const { headerData } = this.props;
-
-    if (headerData && headerData.length) {
+    if (this.hasHeader) {
       this.tbodyDom.addEventListener('scroll', this.handleTableScroll);
     }
   }
 
   componentWillReceiveProps(nextProps) {
-    const widths = this.updateCellWidths(nextProps.headerData, nextProps.data);
+    if (this.hasHeader) {
+      const widths = this.updateCellWidths(nextProps.headerData, nextProps.data);
 
-    if (widths.hasChanged) {
-      this.sizes.cellWidths = widths.cellWidths;
-      this.sizes.bloqued = true;
-      this.setState({ cellWidths: widths.cellWidths });
+      if (widths.hasChanged) {
+        this.sizes.cellWidths = widths.cellWidths;
+        this.sizes.bloqued = true;
+        this.setState({ cellWidths: widths.cellWidths });
+      }
     }
   }
 
@@ -129,7 +134,7 @@ export default class DataSheet extends PureComponent {
     const buildGrid = data => data.map(row => row.map(cell => cell.width || null));
 
     return {
-      header: headerData ? buildGrid(headerData) : [],
+      header: this.hasHeader ? buildGrid(headerData) : [],
       body: buildGrid(bodyData)
     };
   }
@@ -186,11 +191,10 @@ export default class DataSheet extends PureComponent {
       };
     }
 
-    const hasHeader = headerData && headerData.length > 0;
     const hadHeader = cellWidths.header.length > 0;
     const hasBody = bodyData.length > 0;
     const hadBody = cellWidths.body.length > 0;
-    const upHeaderResult = update(hasHeader, hadHeader, cellWidths.header, headerData);
+    const upHeaderResult = update(this.hasHeader, hadHeader, cellWidths.header, headerData);
     const upBodyResult = update(hasBody, hadBody, cellWidths.body, bodyData);
 
     if (upHeaderResult.hasChanged || upBodyResult.hasChanged) {
@@ -240,6 +244,16 @@ export default class DataSheet extends PureComponent {
     updateCellWidths.header[updateCellWidths.header.length - 1] = mainRow;
     updateCellWidths.body = updateCellWidths.body.map(row => mainRow);
     return updateCellWidths;
+  }
+
+  calculateTableWidth() {
+    const { size } = this.props;
+    return this.parseStyleSize(size && size.width ? size.width : 700);
+  }
+
+  calculateTableHeight() {
+    const { size } = this.props;
+    return this.parseStyleSize(size && size.height  && size.height > 400 ? size.height : 400);
   }
 
   pageClick(e) {
@@ -401,9 +415,10 @@ export default class DataSheet extends PureComponent {
   }
 
   handleTableScroll(e) {
+    console.log(this.tbodyDom);
     // Setting the thead left to the inverse of tbody.scrollLeft will make it track the movement
     // of the tbody element.
-    const headScrollLeft = -this.tbodyDom.scrollLeft;
+    const headScrollLeft = -this.tbodyDom.scrollLeft + 1;
 
     // Setting the cells left value to the same as the tbody.scrollLeft makes it maintain
     // it's relative position at the left of the table.
@@ -455,7 +470,9 @@ export default class DataSheet extends PureComponent {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    this.sizes.bloqued = false; // Allow sizes change
+    if (this.sizes) {
+      this.sizes.bloqued = false; // Allow sizes change
+    }
 
     let prevEnd = prevState.end;
     if (!isEmpty(this.state.end) && !(this.state.end.i === prevEnd.i && this.state.end.j === prevEnd.j)) {
@@ -506,17 +523,26 @@ export default class DataSheet extends PureComponent {
   }
 
   buildTableHeader(data) {
-    return data && data.length ? (
-      <thead style={{ left: this.state.headScrollLeft }}>
-        { data.map((row, i) => this.buildHeaderRow(row, i, i === data.length - 1)) }
+    return this.hasHeader ? (
+      <thead ref={ ref => this.theadDom = ref } style={{ left: this.state.headScrollLeft }}>
+        { data.map((row, i) => this.buildHeaderRow(row, i)) }
       </thead>
     ) : null;
   }
 
   buildTableBody(data) {
+    let style = {};
+
+    if (this.hasHeader) {
+      const { size } = this.props;
+      const headerSize = this.theadDom ? this.theadDom.getBoundingClientRect().height : 0;
+      style.width = size && size.width ? this.parseStyleSize(size.width) : '700px';
+      style.height = size && size.height ?  this.parseStyleSize(size.height - headerSize) : '600px';
+    }
+
     return (
-      <tbody ref={ ref => this.tbodyDom = ref }>
-        { data.map((row, i) => this.buildBodyRow(row, i, i === 0)) }
+      <tbody ref={ ref => this.tbodyDom = ref } style={ style }>
+        { data.map((row, i) => this.buildBodyRow(row, i)) }
       </tbody>
     );
   }
@@ -524,12 +550,12 @@ export default class DataSheet extends PureComponent {
   buildHeaderRow(row, i) {
     const { valueRenderer } = this.props;
     const { cellWidths } = this.state;
-    const { header } = cellWidths;
 
     return (
       <tr key={ 'header-row-' + i }>
         {
           row.map((cell, j) => {
+            const width = this.parseStyleSize(cellWidths.header[i][j]);
             const props = {
               key: cell.key ? cell.key : j,
               className: cell.className ? cell.className : '',
@@ -538,7 +564,8 @@ export default class DataSheet extends PureComponent {
               colSpan: cell.colSpan,
               rowSpan: cell.rowSpan,
               readOnly: true,
-              width: this.parseStyleSize(header[i][j]),
+              width: width,
+              minWidth: width,
               overflow: cell.overflow,
               value: valueRenderer(cell, i, j, true),
               component: cell.component,
@@ -554,13 +581,16 @@ export default class DataSheet extends PureComponent {
 
   buildBodyRow(row, i) {
     const { dataRenderer, valueRenderer } = this.props;
-    const { cellWidths } = this.state;
-    const { body } = cellWidths;
+    const getCellWidth = this.hasHeader ?
+      (cell, row, col) => this.state.cellWidths.body[row][col]
+      :
+      cell => cell.width;
 
     return (
       <tr key={this.props.keyFn ? this.props.keyFn(i) : i}>
         {
           row.map((cell, j) => {
+            const width = this.parseStyleSize(getCellWidth(cell, i, j));
             const props = {
               key: cell.key ? cell.key : j,
               className: cell.className ? cell.className : '',
@@ -574,11 +604,15 @@ export default class DataSheet extends PureComponent {
               editing: this.isEditing(i, j),
               reverting: this.isReverting(i, j),
               colSpan: cell.colSpan,
-              width: this.parseStyleSize(body[i][j]),
+              width: width,
+              minWidth: width,
               overflow: cell.overflow,
               value: valueRenderer(cell, i, j, false),
-              onWidthChange: (row, col, newWidth) => this.onCellWidthChange(row, col, newWidth, false)
             };
+
+            if (this.hasHeader) {
+              props.onWidthChange = (row, col, newWidth) => this.onCellWidthChange(row, col, newWidth, false);
+            }
 
             if (cell.disableEvents) {
               props.onMouseDown = nullFtn;
@@ -614,14 +648,24 @@ export default class DataSheet extends PureComponent {
   }
 
   render() {
-    const { className, overflow, data, headerData, width, height } = this.props;
+    const { className, overflow, data, headerData, size } = this.props;
+    const { isScrolling } = this.state;
     const fullCN = [
       'data-grid', className, overflow,
-      headerData && headerData.length && 'has-header'
+      this.hasHeader && 'has-header',
+      isScrolling && 'scrolling-down'
     ].filter(c => c).join(' ');
 
+    let style = {};
+    if (this.hasHeader) {
+      style = {
+        width: this.calculateTableWidth(),
+        height: this.calculateTableHeight()
+      };
+    }
+
     return (
-      <table ref={ (r) => this.dgDom = r } className={ fullCN }>
+      <table ref={ (r) => this.dgDom = r } className={ fullCN } style={ style }>
         { this.buildTableHeader(headerData) }
         { this.buildTableBody(data) }
       </table>
@@ -632,6 +676,10 @@ export default class DataSheet extends PureComponent {
 DataSheet.propTypes = {
   data: PropTypes.array.isRequired,
   className: PropTypes.string,
+  size: PropTypes.shape({
+    width: PropTypes.number,
+    height: PropTypes.number
+  }),
   overflow: PropTypes.oneOf(['wrap', 'nowrap', 'clip']),
   onChange: PropTypes.func,
   onContextMenu: PropTypes.func,

@@ -496,12 +496,7 @@ describe('Component', () => {
           editing: {},
           reverting: {},
           forceEdit: false,
-          clear: {},
-          gridWidths: {
-            body: [[0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: {}
         })
       });
     });
@@ -724,12 +719,7 @@ describe('Component', () => {
           editing: { i: 0, j: 0 },
           reverting: {},
           forceEdit: true,
-          clear: {},
-          gridWidths: {
-            body: [[0, 0], [0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: {}
         });
 
         cells.at(0).find('input').node.value = 213;
@@ -751,12 +741,7 @@ describe('Component', () => {
           editing: { i: 0, j: 0 },
           reverting: {},
           forceEdit: false,
-          clear: { i: 0, j: 0 },
-          gridWidths: {
-            body: [[0, 0], [0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: { i: 0, j: 0 }
         });
         wrapper.find('td.cell.selected input').node.value = 213;
         wrapper.find('td.cell.selected input').simulate('change')
@@ -771,12 +756,7 @@ describe('Component', () => {
           editing: {},
           reverting: {},
           forceEdit: false,
-          clear: { i: 0, j: 0 },
-          gridWidths: {
-            body: [[0, 0], [0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: { i: 0, j: 0 }
         });
       });
 
@@ -795,12 +775,7 @@ describe('Component', () => {
           editing: { i: 0, j: 0 },
           reverting: {},
           forceEdit: false,
-          clear: { i: 0, j: 0 },
-          gridWidths: {
-            body: [[0, 0], [0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: { i: 0, j: 0 }
         });
         dispatchKeyDownEvent(RIGHT_KEY);
         expect(wrapper.state()).toEqual({
@@ -810,12 +785,7 @@ describe('Component', () => {
           editing: { i: 0, j: 0 },
           reverting: {},
           forceEdit: false,
-          clear: { i: 0, j: 0 },
-          gridWidths: {
-            body: [[0, 0], [0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: { i: 0, j: 0 }
         });
       });
 
@@ -1018,12 +988,7 @@ describe('Component', () => {
           editing: {},
           reverting: {},
           forceEdit: false,
-          clear: {},
-          gridWidths: {
-            body: [[0, 0], [0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: {}
         });
       });
 
@@ -1044,12 +1009,7 @@ describe('Component', () => {
           editing: {},
           reverting: {},
           forceEdit: false,
-          clear: {},
-          gridWidths: {
-            body: [[0, 0], [0, 0]],
-            header: []
-          },
-          headScrollLeft: 0
+          clear: {}
         });
       })
       it('delete on DELETE_KEY', () => {

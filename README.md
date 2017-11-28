@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/nadbm/react-datasheet/badge.svg)](https://coveralls.io/github/nadbm/react-datasheet)
 [![Issue Count](https://codeclimate.com/github/nadbm/react-datasheet/badges/issue_count.svg)](https://codeclimate.com/github/nadbm/react-datasheet)
 # React-Datasheet
-A simple react component to create a spreadsheet.
+A simple react component to create a spreadsheet. Adding new feature, fixed header and columns on scroll.
 
 Demo here: https://nadbm.github.io/react-datasheet/
 
@@ -15,7 +15,12 @@ Current features:
 * Deletion using keyboard keys
 * Callbacks for onChange, valueRenderer(visible data)
 * dataRenderer(underlying data in the input, takes the value by default)
+* Optional fixed header on scroll
 
+Todo:
+* Create test for the new features.
+* Fix resizing bugs.
+* Fixed columns
 
 ## Installation
 

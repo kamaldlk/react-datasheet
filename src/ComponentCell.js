@@ -1,5 +1,6 @@
 import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types';
+import { filterCellExtraAttributes } from './utils/utils';
 
 export default class ComponentCell extends PureComponent {
   constructor(props) {
@@ -44,9 +45,11 @@ export default class ComponentCell extends PureComponent {
     const {
       row, col, readOnly, forceComponent, rowSpan, colSpan, width,
       overflow, value, className, editing, selected, onMouseDown,
-      onMouseOver, onDoubleClick, onContextMenu, minWidth
+      onMouseOver, onDoubleClick, onContextMenu, minWidth,
+      extraAttributes
     } = this.props;
     const style = { width };
+    const filteredExtraAttribs = filterCellExtraAttributes(extraAttributes);
 
     if (minWidth) {
       style.minWidth = minWidth;
@@ -66,6 +69,7 @@ export default class ComponentCell extends PureComponent {
         onContextMenu={(e) => onContextMenu(e, row, col)} colSpan={colSpan || 1}
         rowSpan={rowSpan || 1}
         style={style}
+        { ...filteredExtraAttribs }
       >
         { ((editing && !readOnly) || forceComponent) ? this.props.component : value }
       </td>
@@ -90,5 +94,6 @@ ComponentCell.propTypes = {
   onContextMenu: PropTypes.func.isRequired,
   updated: PropTypes.bool,
   forceComponent: PropTypes.bool,
+  extraAttributes: PropTypes.object,
   onWidthChange: PropTypes.func
 };

@@ -134,7 +134,7 @@ export default class DataSheet extends PureComponent {
     const buildGrid = data => data.map(row => row.map(cell => cell.width || null));
 
     return {
-      header: this.hasHeader ? buildGrid(headerData) : [],
+      header: buildGrid(headerData),
       body: buildGrid(bodyData)
     };
   }
@@ -165,7 +165,7 @@ export default class DataSheet extends PureComponent {
             widths[i][j] = null;
           }
 
-          if (widths[i][j] != cell.width) {
+          if (cell.width && cell.width != widths[i][j]) {
             hasChanged = true;
             widths[i][j] = cell.width;
           }
@@ -608,6 +608,7 @@ export default class DataSheet extends PureComponent {
               minWidth: width,
               overflow: cell.overflow,
               value: valueRenderer(cell, i, j, false),
+              extraAttributes: cell.extraAttributes
             };
 
             if (this.hasHeader) {

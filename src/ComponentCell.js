@@ -44,9 +44,14 @@ export default class ComponentCell extends PureComponent {
     const {
       row, col, readOnly, forceComponent, rowSpan, colSpan, width,
       overflow, value, className, editing, selected, onMouseDown,
-      onMouseOver, onDoubleClick, onContextMenu
+      onMouseOver, onDoubleClick, onContextMenu, minWidth
     } = this.props;
-    const style = { width, minWidth: width };
+    const style = { width };
+
+    if (minWidth) {
+      style.minWidth = minWidth;
+    }
+
     return (
       <td
         ref={ ref => this.cellDomNode = ref }
@@ -74,6 +79,7 @@ ComponentCell.propTypes = {
   colSpan: PropTypes.number,
   rowSpan: PropTypes.number,
   width: PropTypes.string,
+  minWidth: PropTypes.string,
   overflow: PropTypes.oneOf(['wrap', 'nowrap', 'clip']),
   className: PropTypes.string,
   selected: PropTypes.bool.isRequired,

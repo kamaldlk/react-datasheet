@@ -28,14 +28,18 @@ class HeaderCell extends PureComponent {
 
   render() {
     const {
-      row, col, rowSpan, colSpan, width,
+      row, col, rowSpan, colSpan, width, minWidth,
       overflow, className, value, component
     } = this.props;
-    const style = { width, minWidth: width };
+    const style = { width };
     const fullCN = [
       className, 'header-cell', 'cell',
       'read-only', overflow
     ].filter(a => a).join(' ');
+
+    if (minWidth) {
+      style.minWidth = minWidth;
+    }
 
     return (
       <th
@@ -65,6 +69,7 @@ HeaderCell.propTypes = {
   colSpan: PropTypes.number,
   rowSpan: PropTypes.number,
   width: PropTypes.string,
+  minWidth: PropTypes.string,
   overflow: PropTypes.oneOf(['wrap', 'nowrap', 'clip']),
   className: PropTypes.string,
   component: PropTypes.element,

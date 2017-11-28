@@ -60,9 +60,13 @@ export default class DataCell extends PureComponent {
     const {
       row, col, rowSpan, readOnly, colSpan, width, overflow,
       value, className, editing, selected, onMouseDown, onMouseOver,
-      onDoubleClick, onContextMenu
+      onDoubleClick, onContextMenu, minWidth
     } = this.props;
-    const style = { width, minWidth: width };
+    const style = { width };
+
+    if (minWidth) {
+      style.minWidth = minWidth;
+    }
 
     return (
       <td
@@ -98,6 +102,7 @@ DataCell.propTypes = {
   colSpan: PropTypes.number,
   rowSpan: PropTypes.number,
   width: PropTypes.string,
+  minWidth: PropTypes.string,
   overflow: PropTypes.oneOf(['wrap', 'nowrap', 'clip']),
   selected: PropTypes.bool.isRequired,
   editing: PropTypes.bool.isRequired,

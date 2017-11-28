@@ -113,7 +113,6 @@ table.data-grid.has-header {
   position: relative;
   width: 100%;
   overflow: hidden;
-  border-collapse: collapse;
 }
 
 table.data-grid.has-header thead {
@@ -127,11 +126,13 @@ table.data-grid.has-header thead tr {
   position: relative;
 }
 
+table.data-grid.has-header.scrolling-down thead tr:last-child {
+  box-shadow: 0px 1px 4px 2px #ddd;
+}
+
 table.data-grid.has-header tbody {
   position: relative;
   display: block; /*separates the tbody from the header*/
-  width: 700px;
-  height: 300px;
   overflow: auto;
   overflow: overlay;
 }

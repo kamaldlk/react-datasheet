@@ -20,7 +20,7 @@ class HeaderCell extends PureComponent {
     if (onWidthChange) {
       const bcr = this.cellDomNode.getBoundingClientRect();
 
-      if (width != bcr.width) {
+      if (width != bcr.width + 'px') {
         onWidthChange(row, col, bcr.width);
       }
     }
@@ -31,7 +31,7 @@ class HeaderCell extends PureComponent {
       row, col, rowSpan, colSpan, width,
       overflow, className, value, component
     } = this.props;
-    const style = { width };
+    const style = { width, minWidth: width };
     const fullCN = [
       className, 'header-cell', 'cell',
       'read-only', overflow

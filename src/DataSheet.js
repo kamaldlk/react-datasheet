@@ -223,10 +223,23 @@ export default class DataSheet extends PureComponent {
         this.clearTimeoutIdForSizesUpdater = null;
 
         if (!this.sizes.bloqued) {
+          this.sizes.cellWidths = this.calculateCellWidths(this.sizes.cellWidths);
           this.setState({ cellWidths: this.sizes.cellWidths });
         }
       }, 50);
     }
+  }
+
+  calculateCellWidths(cellWidths) {
+    const updateCellWidths = Object.assign({}, this.sizes.cellWidths);
+    const headerMainRow = updateCellWidths.header[updateCellWidths.header.length - 1];
+    const bodyMainRow = updateCellWidths.body[0];
+    const mainRow = headerMainRow.map(
+      (colWidth, j) => bodyMainRow[j] > colWidth ? bodyMainRow[j] : colWidth
+    );
+    updateCellWidths.header[updateCellWidths.header.length - 1] = mainRow;
+    updateCellWidths.body = updateCellWidths.body.map(row => mainRow);
+    return updateCellWidths;
   }
 
   pageClick(e) {
@@ -442,6 +455,8 @@ export default class DataSheet extends PureComponent {
   }
 
   componentDidUpdate(prevProps, prevState) {
+    this.sizes.bloqued = false; // Allow sizes change
+
     let prevEnd = prevState.end;
     if (!isEmpty(this.state.end) && !(this.state.end.i === prevEnd.i && this.state.end.j === prevEnd.j)) {
       this.props.onSelect && this.props.onSelect(this.props.data[this.state.end.i][this.state.end.j]);
@@ -493,7 +508,7 @@ export default class DataSheet extends PureComponent {
   buildTableHeader(data) {
     return data && data.length ? (
       <thead style={{ left: this.state.headScrollLeft }}>
-        { data.map((row, i) => this.buildHeaderRow(row, i)) }
+        { data.map((row, i) => this.buildHeaderRow(row, i, i === data.length - 1)) }
       </thead>
     ) : null;
   }
@@ -501,13 +516,15 @@ export default class DataSheet extends PureComponent {
   buildTableBody(data) {
     return (
       <tbody ref={ ref => this.tbodyDom = ref }>
-        { data.map((row, i) => this.buildBodyRow(row, i)) }
+        { data.map((row, i) => this.buildBodyRow(row, i, i === 0)) }
       </tbody>
     );
   }
 
   buildHeaderRow(row, i) {
     const { valueRenderer } = this.props;
+    const { cellWidths } = this.state;
+    const { header } = cellWidths;
 
     return (
       <tr key={ 'header-row-' + i }>
@@ -521,7 +538,7 @@ export default class DataSheet extends PureComponent {
               colSpan: cell.colSpan,
               rowSpan: cell.rowSpan,
               readOnly: true,
-              width: this.parseStyleSize(cell.width),
+              width: this.parseStyleSize(header[i][j]),
               overflow: cell.overflow,
               value: valueRenderer(cell, i, j, true),
               component: cell.component,
@@ -537,6 +554,8 @@ export default class DataSheet extends PureComponent {
 
   buildBodyRow(row, i) {
     const { dataRenderer, valueRenderer } = this.props;
+    const { cellWidths } = this.state;
+    const { body } = cellWidths;
 
     return (
       <tr key={this.props.keyFn ? this.props.keyFn(i) : i}>
@@ -555,7 +574,7 @@ export default class DataSheet extends PureComponent {
               editing: this.isEditing(i, j),
               reverting: this.isReverting(i, j),
               colSpan: cell.colSpan,
-              width: this.parseStyleSize(cell.width),
+              width: this.parseStyleSize(body[i][j]),
               overflow: cell.overflow,
               value: valueRenderer(cell, i, j, false),
               onWidthChange: (row, col, newWidth) => this.onCellWidthChange(row, col, newWidth, false)
@@ -600,8 +619,7 @@ export default class DataSheet extends PureComponent {
       'data-grid', className, overflow,
       headerData && headerData.length && 'has-header'
     ].filter(c => c).join(' ');
-    this.sizes.bloqued = false; // Allow sizes change
-    console.log('render');
+
     return (
       <table ref={ (r) => this.dgDom = r } className={ fullCN }>
         { this.buildTableHeader(headerData) }

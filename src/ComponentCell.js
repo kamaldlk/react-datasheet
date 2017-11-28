@@ -34,7 +34,7 @@ export default class ComponentCell extends PureComponent {
     if (onWidthChange) {
       const bcr = this.cellDomNode.getBoundingClientRect();
 
-      if (width != bcr.width) {
+      if (width != bcr.width + 'px') {
         onWidthChange(row, col, bcr.width);
       }
     }
@@ -46,7 +46,7 @@ export default class ComponentCell extends PureComponent {
       overflow, value, className, editing, selected, onMouseDown,
       onMouseOver, onDoubleClick, onContextMenu
     } = this.props;
-    const style = { width };
+    const style = { width, minWidth: width };
     return (
       <td
         ref={ ref => this.cellDomNode = ref }

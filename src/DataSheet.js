@@ -246,14 +246,31 @@ export default class DataSheet extends PureComponent {
     return updateCellWidths;
   }
 
-  calculateTableWidth() {
+  getHeight() {
     const { size } = this.props;
-    return this.parseStyleSize(size && size.width ? size.width : 700);
+    return size && size.height && size.height > 400 ? size.height : 400;
+  }
+
+  getWidth() {
+    const { size } = this.props;
+    return size && size.width ? size.width : 700;
+  }
+
+  calculateTableWidth() {
+    return this.parseStyleSize(this.getWidth());
   }
 
   calculateTableHeight() {
-    const { size } = this.props;
-    return this.parseStyleSize(size && size.height  && size.height > 400 ? size.height : 400);
+    return this.parseStyleSize(this.getHeight());
+  }
+
+  calculateBodyWidth() {
+    return this.parseStyleSize(this.getWidth());
+  }
+
+  calculateBodyHeight() {
+    const headerHeight = this.theadDom ? this.theadDom.getBoundingClientRect().height : 50;
+    return this.parseStyleSize(this.getHeight() - headerHeight);
   }
 
   pageClick(e) {
@@ -415,10 +432,9 @@ export default class DataSheet extends PureComponent {
   }
 
   handleTableScroll(e) {
-    console.log(this.tbodyDom);
     // Setting the thead left to the inverse of tbody.scrollLeft will make it track the movement
     // of the tbody element.
-    const headScrollLeft = -this.tbodyDom.scrollLeft + 1;
+    const headScrollLeft = -this.tbodyDom.scrollLeft;
 
     // Setting the cells left value to the same as the tbody.scrollLeft makes it maintain
     // it's relative position at the left of the table.
@@ -531,14 +547,10 @@ export default class DataSheet extends PureComponent {
   }
 
   buildTableBody(data) {
-    let style = {};
-
-    if (this.hasHeader) {
-      const { size } = this.props;
-      const headerSize = this.theadDom ? this.theadDom.getBoundingClientRect().height : 0;
-      style.width = size && size.width ? this.parseStyleSize(size.width) : '700px';
-      style.height = size && size.height ?  this.parseStyleSize(size.height - headerSize) : '600px';
-    }
+    const style = this.hasHeader ? {
+      width: this.calculateBodyWidth(),
+      height: this.calculateBodyHeight()
+    } : {};
 
     return (
       <tbody ref={ ref => this.tbodyDom = ref } style={ style }>

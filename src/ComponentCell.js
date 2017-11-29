@@ -6,6 +6,7 @@ export default class ComponentCell extends PureComponent {
   constructor(props) {
     super(props);
     this.state = { updated: false };
+    this.clearTimeoutIdForSizesUpdater = null;
   }
 
   componentDidMount() {
@@ -30,14 +31,19 @@ export default class ComponentCell extends PureComponent {
   }
 
   checkWidth() {
-    const { onWidthChange, width, row, col } = this.props;
+    const { onWidthChange } = this.props;
 
-    if (onWidthChange) {
-      const bcr = this.cellDomNode.getBoundingClientRect();
+    if (onWidthChange && this.clearTimeoutIdForSizesUpdater === null) {
+      this.clearTimeoutIdForSizesUpdater = setTimeout(() => {
+        this.clearTimeoutIdForSizesUpdater = null;
 
-      if (width != bcr.width + 'px') {
-        onWidthChange(row, col, bcr.width);
-      }
+        const { width, row, col } = this.props;
+        const bcr = this.cellDomNode.getBoundingClientRect();
+
+        if (width != bcr.width + 'px') {
+          onWidthChange(row, col, bcr.width);
+        }
+      }, 100);
     }
   }
 

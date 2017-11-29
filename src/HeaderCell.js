@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 class HeaderCell extends PureComponent {
   constructor(props) {
     super(props);
+    this.clearTimeoutIdForSizesUpdater = null;
   }
 
   componentDidMount() {
@@ -15,14 +16,19 @@ class HeaderCell extends PureComponent {
   }
 
   checkWidth() {
-    const { onWidthChange, width, row, col } = this.props;
+    const { onWidthChange } = this.props;
 
-    if (onWidthChange) {
-      const bcr = this.cellDomNode.getBoundingClientRect();
+    if (onWidthChange && this.clearTimeoutIdForSizesUpdater === null) {
+      this.clearTimeoutIdForSizesUpdater = setTimeout(() => {
+        this.clearTimeoutIdForSizesUpdater = null;
 
-      if (width != bcr.width + 'px') {
-        onWidthChange(row, col, bcr.width);
-      }
+        const { width, row, col } = this.props;
+        const bcr = this.cellDomNode.getBoundingClientRect();
+
+        if (width != bcr.width + 'px') {
+          onWidthChange(row, col, bcr.width);
+        }
+      }, 100);
     }
   }
 

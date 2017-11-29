@@ -113,6 +113,8 @@ table.data-grid.has-header {
   position: relative;
   width: 100%;
   overflow: hidden;
+  border-collapse: separate;
+  border: 1px solid #ccc;
 }
 
 table.data-grid.has-header thead {

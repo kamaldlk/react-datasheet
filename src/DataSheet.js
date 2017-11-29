@@ -78,14 +78,6 @@ export default class DataSheet extends PureComponent {
     this.removeAllListeners = this.removeAllListeners.bind(this);
   }
 
-  removeAllListeners() {
-    document.removeEventListener('keydown',   this.handleKey);
-    document.removeEventListener('mousedown', this.pageClick);
-    document.removeEventListener('mouseup',   this.onMouseUp);
-    document.removeEventListener('copy',      this.handleCopy);
-    document.removeEventListener('paste',     this.handlePaste);
-  }
-
   componentWillUnmount() {
     this.removeAllListeners();
 
@@ -102,7 +94,7 @@ export default class DataSheet extends PureComponent {
 
   componentWillReceiveProps(nextProps) {
     if (this.hasHeader) {
-      const widths = this.updateCellWidths(nextProps.headerData, nextProps.data);
+      const widths = this.updateCellWidthsFromProps(nextProps.headerData, nextProps.data);
 
       if (widths.hasChanged) {
         this.sizes.cellWidths = widths.cellWidths;
@@ -110,6 +102,14 @@ export default class DataSheet extends PureComponent {
         this.setState({ cellWidths: widths.cellWidths });
       }
     }
+  }
+
+  removeAllListeners() {
+    document.removeEventListener('keydown',   this.handleKey);
+    document.removeEventListener('mousedown', this.pageClick);
+    document.removeEventListener('mouseup',   this.onMouseUp);
+    document.removeEventListener('copy',      this.handleCopy);
+    document.removeEventListener('paste',     this.handlePaste);
   }
 
   /**
@@ -140,16 +140,24 @@ export default class DataSheet extends PureComponent {
   }
 
   /**
-   * Updates cell widths state when the component recive props.
+   * Updates cell widths state when the component receive props.
    *
    * @param {array} headerData Data of the header.
    * @param {array} bodyData Data of the body.
    * @return {object} cellWidths updated state and if those has changed.
    */
-  updateCellWidths(headerData, bodyData) {
+  updateCellWidthsFromProps(headerData, bodyData) {
     const cellWidths = Object.assign({}, this.state.cellWidths);
 
-    const updateWidths = (widths, newData) => {
+    /*
+     * Agnostic function to update header / body cell widths if those
+     * has changed in the new props data.
+     *
+     * @param {array} widths Current cell widths array
+     * @param {Map} prevPropsWidths Map of the previous props cell widths
+     * @param {array} newData New props data
+     */
+    const updateWidths = (widths, prevPropsWidthsMap, newData) => {
       let hasChanged = widths.length != newData.length;
 
       newData.forEach((row, i) => {
@@ -162,10 +170,14 @@ export default class DataSheet extends PureComponent {
 
         row.forEach((cell, j) => {
           if (widths[i][j] === undefined) {
+            hasChanged = true;
             widths[i][j] = null;
           }
 
-          if (cell.width && cell.width != widths[i][j]) {
+          if (
+            cell.width && cell.width != prevPropsWidthsMap.get(i + '.' + j) &&
+            cell.width != widths[i][j]
+          ) {
             hasChanged = true;
             widths[i][j] = cell.width;
           }
@@ -175,9 +187,18 @@ export default class DataSheet extends PureComponent {
       return { widths, hasChanged };
     };
 
-    const update = (has, had, widths, data) => {
+    /*
+     * Agnostic function to update header / body cell widths if those
+     * has changed in the new props data.
+     *
+     * @param {bool} has If there is data (for header or body) in this nextProps
+     * @param {bool} had If there was previous data
+     * @param {array} widths Current cell widths array
+     * @param {Map} prevPropsWidthsMap Map of the previous props cell widths
+     */
+    const update = (has, had, widths, data, prevPropsWidthsMap) => {
       if (has) {
-        return updateWidths(widths, data);
+        return updateWidths(widths, prevPropsWidthsMap, data);
       } else if (had) {
         return {
           widths: [],
@@ -191,18 +212,44 @@ export default class DataSheet extends PureComponent {
       };
     }
 
+    const buildPrevPropsWidthsMap = prevPropsData => {
+      const map = new Map();
+
+      prevPropsData.forEach((row, i) => {
+        row.forEach((cell, j) => {
+          if (cell.width) {
+            map.set(i + '.' + j, cell.width);
+          }
+        });
+      });
+
+      return map;
+    };
+
     const hadHeader = cellWidths.header.length > 0;
     const hasBody = bodyData.length > 0;
     const hadBody = cellWidths.body.length > 0;
-    const upHeaderResult = update(this.hasHeader, hadHeader, cellWidths.header, headerData);
-    const upBodyResult = update(hasBody, hadBody, cellWidths.body, bodyData);
+    const upHeaderResult = update(
+      this.hasHeader,
+      hadHeader,
+      cellWidths.header,
+      headerData,
+      buildPrevPropsWidthsMap(this.props.headerData)
+    );
+    const upBodyResult = update(
+      hasBody,
+      hadBody,
+      cellWidths.body,
+      bodyData,
+      buildPrevPropsWidthsMap(this.props.data)
+    );
 
     if (upHeaderResult.hasChanged || upBodyResult.hasChanged) {
       return {
-        cellWidths: {
+        cellWidths: this.calculateCellWidths({
           header: upHeaderResult.widths,
           body: upBodyResult.widths
-        },
+        }),
         hasChanged: true
       };
     }
@@ -216,8 +263,10 @@ export default class DataSheet extends PureComponent {
   /**
    * Throttle function to update the cell widths state. This method will
    * be called by the onCellWidthChange several times on rendering so to
-   * avoid useless state changes we have this function that only updates
-   * the state after all the update width calls.
+   * avoid useless state changes (and ineficient calculations) we have this
+   * function that only updates the state after all the update width calls.
+   * Also without this a infinite loop will happen because of how html tables
+   * calculate its cell width
    *
    * @return {void}
    */
@@ -227,6 +276,7 @@ export default class DataSheet extends PureComponent {
         this.clearTimeoutIdForSizesUpdater = null;
 
         if (!this.sizes.bloqued) {
+          this.sizes.bloqued = true;
           this.sizes.cellWidths = this.calculateCellWidths(this.sizes.cellWidths);
           this.setState({ cellWidths: this.sizes.cellWidths });
         }
@@ -235,15 +285,15 @@ export default class DataSheet extends PureComponent {
   }
 
   calculateCellWidths(cellWidths) {
-    const updateCellWidths = Object.assign({}, this.sizes.cellWidths);
-    const headerMainRow = updateCellWidths.header[updateCellWidths.header.length - 1];
-    const bodyMainRow = updateCellWidths.body[0];
+    const updatedCellWidths = Object.assign({}, this.sizes.cellWidths);
+    const headerMainRow = updatedCellWidths.header[updatedCellWidths.header.length - 1];
+    const bodyMainRow = updatedCellWidths.body[0];
     const mainRow = headerMainRow.map(
       (colWidth, j) => bodyMainRow[j] > colWidth ? bodyMainRow[j] : colWidth
     );
-    updateCellWidths.header[updateCellWidths.header.length - 1] = mainRow;
-    updateCellWidths.body = updateCellWidths.body.map(row => mainRow);
-    return updateCellWidths;
+    updatedCellWidths.header[updatedCellWidths.header.length - 1] = mainRow;
+    updatedCellWidths.body = updatedCellWidths.body.map(row => mainRow);
+    return updatedCellWidths;
   }
 
   getHeight() {
@@ -534,7 +584,7 @@ export default class DataSheet extends PureComponent {
     // new sizes and we can continue updating the sizes repository.
     if (!this.sizes.bloqued) {
       this.sizes.cellWidths[isHeader ? 'header' : 'body'][row][col] = width;
-      this.updateCellWidthsState(); // Throttle function, 50 ms
+      this.updateCellWidthsState(); // Throttle function, 70 ms
     }
   }
 

@@ -583,8 +583,12 @@ export default class DataSheet extends PureComponent {
     // render call. Then we wait until the component render with the
     // new sizes and we can continue updating the sizes repository.
     if (!this.sizes.bloqued) {
-      this.sizes.cellWidths[isHeader ? 'header' : 'body'][row][col] = width;
-      this.updateCellWidthsState(); // Throttle function, 70 ms
+      const key = isHeader ? 'header' : 'body';
+
+      if (width > this.sizes.cellWidths[key][row][col]) {
+        this.sizes.cellWidths[key][row][col] = width;
+        this.updateCellWidthsState(); // Throttle function, 70 ms
+      }
     }
   }
 

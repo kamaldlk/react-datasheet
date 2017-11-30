@@ -280,7 +280,7 @@ export default class DataSheet extends PureComponent {
           this.sizes.cellWidths = this.calculateCellWidths(this.sizes.cellWidths);
           this.setState({ cellWidths: this.sizes.cellWidths });
         }
-      }, 50);
+      }, 40);
     }
   }
 

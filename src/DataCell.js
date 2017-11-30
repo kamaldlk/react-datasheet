@@ -54,7 +54,7 @@ export default class DataCell extends PureComponent {
         if (width != bcr.width + 'px') {
           onWidthChange(row, col, bcr.width);
         }
-      }, 100);
+      }, 5);
     }
   }
 

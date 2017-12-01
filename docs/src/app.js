@@ -17,12 +17,12 @@ export default class App extends React.Component {
         </div>
         <div className={'container'} >
           <div style={{float: 'right', marginTop: '-20px'}}>
-            <a 
-              className="github-button" 
+            <a
+              className="github-button"
               href="https://github.com/nadbm/react-datasheet"
-              data-style="mega" data-count-href="/nadbm/react-datasheet/stargazers" 
-              data-count-api="/repos/nadbm/react-datasheet#stargazers_count" 
-              data-count-aria-label="# stargazers on GitHub" 
+              data-style="mega" data-count-href="/nadbm/react-datasheet/stargazers"
+              data-count-api="/repos/nadbm/react-datasheet#stargazers_count"
+              data-count-aria-label="# stargazers on GitHub"
               aria-label="Star nadbm/react-datasheet on GitHub">
               Star
             </a>

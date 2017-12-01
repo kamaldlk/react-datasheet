@@ -30,7 +30,7 @@ const dispatchKeyDownEvent = (key, shift=false) => {
   Object.defineProperty(e, 'shiftKey', {
     get: () => shift
   });
-  e.initEvent("keydown", true, true);
+  e.initEvent('keydown', true, true);
   document.dispatchEvent(e);
 }
 
@@ -300,7 +300,7 @@ describe('Component', () => {
                 <div>HELLO</div>
               </td>).html())
             done();
-          } catch(e) {
+          } catch (e) {
             done(e)
           }
         }, 750)
@@ -371,12 +371,12 @@ describe('Component', () => {
     });
     afterEach(() => {
       wrapper.instance().removeAllListeners();
-      if(customWrapper) {
+      if (customWrapper) {
         customWrapper.instance().removeAllListeners();
         customWrapper = null;
       }
     })
-    describe("rendering with varying props", () => {
+    describe('rendering with varying props', () => {
       it('renders the proper elements', () => {
         expect(wrapper.find('table').length).toEqual(1);
         expect(_.values(wrapper.find('table').node.classList)).toEqual(['data-grid', 'test', 'nowrap'])
@@ -385,7 +385,7 @@ describe('Component', () => {
         expect(wrapper.find('td > span').nodes.map(n => n.innerHTML)).toEqual(['4', '2', '3', '5']);
       })
 
-       it('renders the proper keys', () => {
+      it('renders the proper keys', () => {
         expect(wrapper.find('table tr').at(0).key()).toEqual('custom_key_0');
         expect(wrapper.find('table tr').at(1).key()).toEqual('custom_key_1');
         expect(wrapper.find(DataCell).at(1).key()).toEqual('custom_key');
@@ -501,7 +501,7 @@ describe('Component', () => {
       });
     });
 
-    describe("selection", () => {
+    describe('selection', () => {
       it('selects a single field properly', () => {
 
         expect(wrapper.find('td.cell.selected').length).toEqual(0);
@@ -947,6 +947,30 @@ describe('Component', () => {
           evt.initEvent("paste", false, true);
           evt.clipboardData = { getData: (type)=> '99\t100\n1001\t1002'};
           document.dispatchEvent(evt);
+      });
+
+      it('pastes data properly, using parsePaste if defined', () => {
+        const datacust = [[{data: 12, readOnly: true}, {data: 24, readOnly: false}],[{data: 1012, readOnly: true}, {data: 1024, readOnly: false}]];
+        customWrapper = mount(
+          <DataSheet
+            data = {datacust}
+            valueRenderer = {(cell) => cell.data}
+            onChange = {(cell, i, j, value) => datacust[i][j].data = value}
+            // "--" is our arbitrary row delimiter, "," is our arbitrary field delimiter
+            parsePaste = {(pasted) => {
+              return pasted.split('--').map((line) => line.split(','))
+            }}
+          />
+        );
+        customWrapper.find('td').at(1).simulate('mouseDown');
+
+        let evt = document.createEvent("HTMLEvents");
+        evt.initEvent("paste", false, true);
+        evt.clipboardData = { getData: (type)=> '99,100--1001,1002'};
+        document.dispatchEvent(evt);
+
+        expect(datacust[1].map(d => d.data)).toEqual([1012, '1001'])
+
       });
 
 

@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/nadbm/react-datasheet/badge.svg)](https://coveralls.io/github/nadbm/react-datasheet)
 [![Issue Count](https://codeclimate.com/github/nadbm/react-datasheet/badges/issue_count.svg)](https://codeclimate.com/github/nadbm/react-datasheet)
 # React-Datasheet
-A simple react component to create a spreadsheet.
+A simple react component to create a spreadsheet. Adding new feature, fixed header and columns on scroll.
 
 Demo here: https://nadbm.github.io/react-datasheet/
 
@@ -15,7 +15,12 @@ Current features:
 * Deletion using keyboard keys
 * Callbacks for onChange, valueRenderer(visible data)
 * dataRenderer(underlying data in the input, takes the value by default)
+* Optional fixed header on scroll
 
+Todo:
+* Create test for the new features.
+* Fix resizing bugs.
+* Fixed columns
 
 ## Installation
 
@@ -119,6 +124,7 @@ overflow | 'wrap'\|'nowrap'\|'clip' | Grid default for how to render overflow te
 onChange | func | onChange handler: `function(cell, i, j, newValue) {}`
 onPaste | func | onPaste handler: `function(array) {}` If set, the function will be called with an array of rows. Each row has an array of objects containing the cell and raw pasted value. If the pasted value cannot be matched with a cell, the cell value will be undefined
 onContextMenu | func | Context menu handler : `function(event, cell, i, j)`
+parsePaste | func | `function (string) {}` If set, the function will be called with the raw clipboard data. It should return an array of arrays of strings. This is useful for when the clipboard may have data with irregular field or line delimiters. If not set, rows will be split with line breaks and cells with tabs.
 
 ## Cell Options
 

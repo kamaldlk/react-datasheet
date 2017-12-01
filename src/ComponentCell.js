@@ -1,10 +1,16 @@
 import React, { PureComponent } from 'react'
 import PropTypes from 'prop-types';
+import { filterCellExtraAttributes } from './utils/utils';
 
 export default class ComponentCell extends PureComponent {
   constructor(props) {
     super(props);
     this.state = { updated: false };
+    this.clearTimeoutIdForSizesUpdater = null;
+  }
+
+  componentDidMount() {
+    this.checkWidth();
   }
 
   componentWillUpdate(nextProps) {
@@ -16,19 +22,48 @@ export default class ComponentCell extends PureComponent {
     }
   }
 
+  componentDidUpdate() {
+    this.checkWidth();
+  }
+
   componentWillUnmount() {
     clearTimeout(this.timeout);
   }
 
+  checkWidth() {
+    const { onWidthChange } = this.props;
+
+    if (onWidthChange && this.clearTimeoutIdForSizesUpdater === null) {
+      this.clearTimeoutIdForSizesUpdater = setTimeout(() => {
+        this.clearTimeoutIdForSizesUpdater = null;
+
+        const { width, row, col } = this.props;
+        const bcr = this.cellDomNode.getBoundingClientRect();
+
+        if (width != bcr.width + 'px') {
+          onWidthChange(row, col, bcr.width);
+        }
+      }, 5);
+    }
+  }
+
   render() {
-    let {
-      row, col, readOnly, forceComponent, rowSpan, colSpan, width, overflow, value, className, editing, selected,
-      onMouseDown, onMouseOver, onDoubleClick, onContextMenu
+    const {
+      row, col, readOnly, forceComponent, rowSpan, colSpan, width,
+      overflow, value, className, editing, selected, onMouseDown,
+      onMouseOver, onDoubleClick, onContextMenu, minWidth,
+      extraAttributes
     } = this.props;
     const style = { width };
+    const filteredExtraAttribs = filterCellExtraAttributes(extraAttributes);
+
+    if (minWidth) {
+      style.minWidth = minWidth;
+    }
 
     return (
       <td
+        ref={ ref => this.cellDomNode = ref }
         className={[
           className, 'cell', overflow,
           editing && 'editing', selected && 'selected',
@@ -40,6 +75,7 @@ export default class ComponentCell extends PureComponent {
         onContextMenu={(e) => onContextMenu(e, row, col)} colSpan={colSpan || 1}
         rowSpan={rowSpan || 1}
         style={style}
+        { ...filteredExtraAttribs }
       >
         { ((editing && !readOnly) || forceComponent) ? this.props.component : value }
       </td>
@@ -53,6 +89,7 @@ ComponentCell.propTypes = {
   colSpan: PropTypes.number,
   rowSpan: PropTypes.number,
   width: PropTypes.string,
+  minWidth: PropTypes.string,
   overflow: PropTypes.oneOf(['wrap', 'nowrap', 'clip']),
   className: PropTypes.string,
   selected: PropTypes.bool.isRequired,
@@ -62,5 +99,7 @@ ComponentCell.propTypes = {
   onMouseOver: PropTypes.func.isRequired,
   onContextMenu: PropTypes.func.isRequired,
   updated: PropTypes.bool,
-  forceComponent: PropTypes.bool
+  forceComponent: PropTypes.bool,
+  extraAttributes: PropTypes.object,
+  onWidthChange: PropTypes.func
 };
